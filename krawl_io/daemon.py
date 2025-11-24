@@ -10,7 +10,7 @@ import signal
 import sys
 import logging
 from pathlib import Path
-from typing import List, Dict, Set, Optional, Callable
+from typing import List, Dict, Set, Optional, Callable, Any
 from datetime import datetime
 import json
 from urllib.parse import urljoin, urlparse
@@ -105,7 +105,7 @@ class SourceDiscovery:
         url: str,
         depth: int = 0,
         visited: Optional[Set[str]] = None
-    ) -> List[Dict[str, any]]:
+    ) -> List[Dict[str, Any]]:
         """
         Discover new sources starting from a URL.
         
@@ -169,7 +169,7 @@ class SourceDiscovery:
             soup = BeautifulSoup(html, 'html.parser')
             title_tag = soup.find('title')
             return title_tag.get_text(strip=True) if title_tag else ""
-        except:
+        except Exception:
             return ""
     
     def _calculate_relevance(self, text: str, url: str) -> float:
@@ -300,7 +300,7 @@ class Daemon:
         except Exception as e:
             self.logger.error(f"Failed to save sources: {e}")
     
-    def get_status(self) -> Dict[str, any]:
+    def get_status(self) -> Dict[str, Any]:
         """
         Get daemon status information.
         
