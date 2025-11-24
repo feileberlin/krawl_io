@@ -10,5 +10,6 @@ __author__ = "krawl_io contributors"
 
 from .scraper import Scraper
 from .config import Config
+from .daemon import Daemon, SourceDiscovery
 
-__all__ = ["Scraper", "Config"]
+__all__ = ["Scraper", "Config", "Daemon", "SourceDiscovery"]

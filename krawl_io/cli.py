@@ -13,6 +13,7 @@ from typing import Optional
 
 from .scraper import Scraper
 from .config import Config
+from .daemon import Daemon, SourceDiscovery
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -47,7 +48,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         'url',
         type=str,
-        help='URL to scrape (required)'
+        nargs='?',
+        help='URL to scrape (required unless using --daemon mode)'
     )
     
     # Optional arguments
@@ -92,6 +94,45 @@ def create_parser() -> argparse.ArgumentParser:
         help='Suppress all output except errors'
     )
     
+    # Daemon mode arguments
+    parser.add_argument(
+        '--daemon',
+        action='store_true',
+        help='Run in daemon mode for continuous source discovery'
+    )
+    
+    parser.add_argument(
+        '--topics',
+        type=str,
+        nargs='+',
+        help='Topics/keywords for source discovery (daemon mode)',
+        metavar='TOPIC'
+    )
+    
+    parser.add_argument(
+        '--areas',
+        type=str,
+        nargs='+',
+        help='Geographic areas to filter (daemon mode)',
+        metavar='AREA'
+    )
+    
+    parser.add_argument(
+        '--interval',
+        type=int,
+        default=3600,
+        help='Scraping interval in seconds for daemon mode (default: 3600)',
+        metavar='SECONDS'
+    )
+    
+    parser.add_argument(
+        '--max-depth',
+        type=int,
+        default=2,
+        help='Maximum link following depth for discovery (default: 2)',
+        metavar='DEPTH'
+    )
+    
     parser.add_argument(
         '--version',
         action='version',
@@ -132,6 +173,50 @@ def main() -> int:
                 return 1
             config = Config(config_path)
             logger.info(f"Loaded configuration from {args.config}")
+        else:
+            config = Config()
+        
+        # Handle daemon mode
+        if args.daemon:
+            if not args.topics:
+                logger.error("Daemon mode requires --topics to be specified")
+                return 1
+            
+            if not args.url:
+                logger.error("Daemon mode requires at least one seed URL")
+                return 1
+            
+            # Setup source discovery
+            discovery = SourceDiscovery(
+                topics=args.topics,
+                areas=args.areas if args.areas else [],
+                max_depth=args.max_depth
+            )
+            
+            # Create and start daemon
+            daemon = Daemon(config=config, discovery=discovery)
+            
+            logger.info(f"Starting daemon with topics: {', '.join(args.topics)}")
+            if args.areas:
+                logger.info(f"Filtering by areas: {', '.join(args.areas)}")
+            logger.info(f"Scraping interval: {args.interval} seconds")
+            logger.info(f"Max discovery depth: {args.max_depth}")
+            
+            # Split URL argument by commas if multiple URLs provided
+            seed_urls = [url.strip() for url in args.url.split(',')]
+            
+            daemon.start(
+                seed_urls=seed_urls,
+                interval=args.interval
+            )
+            
+            return 0
+        
+        # Normal single-scrape mode
+        if not args.url:
+            logger.error("URL is required for single-scrape mode")
+            parser.print_help()
+            return 1
         
         # Create scraper instance
         timeout = args.timeout

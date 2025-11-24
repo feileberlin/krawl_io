@@ -14,6 +14,8 @@ The `krawl_io` project provides robust web scraping capabilities with a focus on
 - **Configurable Settings**: Save and reuse scraping configurations
 - **Comprehensive Logging**: Track scraping operations with detailed logging
 - **Error Handling**: Robust error handling with helpful user feedback
+- **Daemon Mode**: Run continuous source discovery in the background
+- **Topic-Based Filtering**: Automatically discover sources based on configured topics and areas
 
 ## Installation
 
@@ -87,6 +89,45 @@ krawl https://example.com -c config.json
 krawl --help
 ```
 
+### Daemon Mode
+
+Run krawl_io as a continuous background daemon to discover new sources related to specific topics:
+
+**Basic daemon mode:**
+```bash
+krawl https://example.com/events \
+  --daemon \
+  --topics events concert festival \
+  --interval 3600
+```
+
+**With geographic filtering:**
+```bash
+krawl https://example.com/events \
+  --daemon \
+  --topics music party events \
+  --areas berlin germany \
+  --interval 1800 \
+  --max-depth 3
+```
+
+**Multiple seed URLs:**
+```bash
+krawl "https://example.com/events,https://example.com/calendar" \
+  --daemon \
+  --topics cultural events \
+  --areas "san francisco" "bay area"
+```
+
+The daemon will:
+- Continuously monitor seed URLs at the specified interval
+- Follow links up to `max-depth` levels
+- Filter discovered pages based on topic and area keywords
+- Save discovered sources to `discovered_sources.json`
+- Calculate relevance scores for each source
+
+Press `Ctrl+C` to gracefully stop the daemon.
+
 ### Python API
 
 You can also use krawl_io programmatically in your Python scripts:
@@ -108,7 +149,29 @@ scraper = Scraper(url="https://example.com", timeout=config.get("timeout"))
 results = scraper.scrape()
 ```
 
-See `examples/basic_usage.py` for more detailed examples.
+**Daemon mode programmatically:**
+```python
+from krawl_io import Daemon, SourceDiscovery, Config
+
+# Setup discovery
+discovery = SourceDiscovery(
+    topics=["events", "concert", "festival"],
+    areas=["berlin", "germany"],
+    max_depth=2
+)
+
+# Create and start daemon
+config = Config()
+daemon = Daemon(config=config, discovery=discovery)
+
+daemon.start(
+    seed_urls=["https://example.com/events"],
+    interval=3600,  # Check every hour
+    callback=lambda source: print(f"Found: {source['url']}")
+)
+```
+
+See `examples/basic_usage.py` and `examples/daemon_usage.py` for more detailed examples.
 
 ## Configuration
 
@@ -119,7 +182,9 @@ Create a JSON configuration file to customize scraping behavior:
   "timeout": 30,
   "user_agent": "krawl_io/0.1.0",
   "max_retries": 3,
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "daemon_output": "discovered_sources.json",
+  "daemon_stop_on_error": false
 }
 ```
 
