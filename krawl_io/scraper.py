@@ -39,12 +39,12 @@ class Scraper:
         }
         self.logger = logging.getLogger(__name__)
     
-    def fetch(self) -> Optional[str]:
+    def fetch(self) -> str:
         """
         Fetch the HTML content from the URL.
         
         Returns:
-            The HTML content as a string, or None if the request failed
+            The HTML content as a string
             
         Raises:
             requests.RequestException: If the request fails
@@ -99,8 +99,10 @@ class Scraper:
             
         Returns:
             List of extracted text strings
+            
+        Raises:
+            requests.RequestException: If fetching fails
+            Exception: If parsing fails
         """
         html = self.fetch()
-        if html:
-            return self.parse(html, selector)
-        return []
+        return self.parse(html, selector)
